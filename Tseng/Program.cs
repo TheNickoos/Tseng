@@ -40,12 +40,13 @@ namespace Tseng
         private static string ProcessName { get; set; }
         private static FF7SaveMap SaveMap { get; set; }
         private static Timer Timer { get; set; }
+        private static Timer TimerGame { get; set; }
 
-        #endregion Private Properties
+    #endregion Private Properties
 
-        #region Public Methods
+    #region Public Methods
 
-        public static GameStatus ExtractStatusFromMap(FF7SaveMap map, FF7BattleMap battleMap)
+    public static GameStatus ExtractStatusFromMap(FF7SaveMap map, FF7BattleMap battleMap)
         {
             var time = map.LiveTotalSeconds;
 
@@ -193,7 +194,7 @@ namespace Tseng
             }
             var ff7Exe = FF7.MainModule?.FileName;
             var ff7Folder = Path.GetDirectoryName(ff7Exe);
-            var kernelLocation = Path.Combine(ff7Folder, "data", "lang-en", "kernel");
+            var kernelLocation = Path.Combine(ff7Folder, "data", "kernel");
 
             var elena = new KernelReader(Path.Combine(kernelLocation, "KERNEL.BIN"));
             elena.MergeKernel2Data(Path.Combine(kernelLocation, "kernel2.bin"));
@@ -351,6 +352,7 @@ namespace Tseng
             }
 
             Console.WriteLine($"Located FF7 process {FF7.ProcessName}");
+            
         }
 
         private static void SearchForProcess(string processName)
@@ -359,10 +361,10 @@ namespace Tseng
             if (Timer is null)
             {
                 Timer = new Timer(300);
-                Timer.Elapsed += Timer_Elapsed;
+                Timer.Elapsed += TimerGame_Elapsed;
                 Timer.AutoReset = true;
 
-                Timer_Elapsed(null, null);
+                TimerGame_Elapsed(null, null);
                 Timer.Start();
             }
             lock (Timer)
@@ -402,12 +404,12 @@ namespace Tseng
         {
             if (Timer is null)
             {
-                Timer = new Timer(500);
-                Timer.Elapsed += Timer_Elapsed;
-                Timer.AutoReset = true;
+                TimerGame = new Timer(500);
+                TimerGame.Elapsed += TimerGame_Elapsed;
+                TimerGame.AutoReset = true;
 
-                Timer_Elapsed(null, null);
-                Timer.Start();
+                TimerGame_Elapsed(null, null);
+                TimerGame.Start();
             }
         }
 
@@ -418,28 +420,37 @@ namespace Tseng
             serverTask.Wait();
         }
 
-        private static void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        private static void TimerGame_Elapsed(object sender, ElapsedEventArgs e)
         {
             try
             {
-                var saveMapByteData = MemoryReader.ReadMemory(new IntPtr(Addresses.SaveMapStart), 4342);
-                var isBattle = MemoryReader.ReadMemory(new IntPtr(Addresses.ActiveBattleState), 1).First();
-                var battleMapByteData = MemoryReader.ReadMemory(new IntPtr(Addresses.BattleMapStart), 0x750);
-                var colors = MemoryReader.ReadMemory(new IntPtr(Addresses.WindowColorBlockStart), 16);
+                if (MemoryReader != null) { 
+                    var saveMapByteData = MemoryReader.ReadMemory(new IntPtr(Addresses.SaveMapStart), 4342);
+                    var isBattle = MemoryReader.ReadMemory(new IntPtr(Addresses.ActiveBattleState), 1).First();
+                
+                    var battleMapByteData = MemoryReader.ReadMemory(new IntPtr(Addresses.BattleMapStart), 0x750);
+                    var colors = MemoryReader.ReadMemory(new IntPtr(Addresses.WindowColorBlockStart), 16);
 
-                SaveMap = new FF7SaveMap(saveMapByteData);
-                BattleMap = new FF7BattleMap(battleMapByteData, isBattle);
+                    SaveMap = new FF7SaveMap(saveMapByteData);
+                    BattleMap = new FF7BattleMap(battleMapByteData, isBattle);
 
-                SaveMap.WindowColorTopLeft = $"{colors[0x2]:X2}{colors[0x1]:X2}{colors[0x0]:X2}";
-                SaveMap.WindowColorBottomLeft = $"{colors[0x6]:X2}{colors[0x5]:X2}{colors[0x4]:X2}";
-                SaveMap.WindowColorTopRight = $"{colors[0xA]:X2}{colors[0x9]:X2}{colors[0x8]:X2}";
-                SaveMap.WindowColorBottomRight = $"{colors[0xE]:X2}{colors[0xD]:X2}{colors[0xC]:X2}";
+                    SaveMap.WindowColorTopLeft = $"{colors[0x2]:X2}{colors[0x1]:X2}{colors[0x0]:X2}";
+                    SaveMap.WindowColorBottomLeft = $"{colors[0x6]:X2}{colors[0x5]:X2}{colors[0x4]:X2}";
+                    SaveMap.WindowColorTopRight = $"{colors[0xA]:X2}{colors[0x9]:X2}{colors[0x8]:X2}";
+                    SaveMap.WindowColorBottomRight = $"{colors[0xE]:X2}{colors[0xD]:X2}{colors[0xC]:X2}";
 
-                PartyStatus = ExtractStatusFromMap(SaveMap, BattleMap);
+                    PartyStatus = ExtractStatusFromMap(SaveMap, BattleMap);
+                }
+                else
+                {
+                    SearchForProcess(ProcessName);
+                }
             }
             catch (Exception ex)
             {
+                Console.WriteLine("Ex : " + ex);
                 SearchForProcess(ProcessName);
+                throw ex;
             }
         }
 

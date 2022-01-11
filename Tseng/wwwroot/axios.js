@@ -897,11 +897,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return data.buffer;
 	    }
 	    if (utils.isURLSearchParams(data)) {
-	      setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=utf-8');
+			setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=UTF-8');
 	      return data.toString();
 	    }
 	    if (utils.isObject(data)) {
-	      setContentTypeIfUnset(headers, 'application/json;charset=utf-8');
+			setContentTypeIfUnset(headers, 'application/json;charset=UTF-8');
 	      return JSON.stringify(data);
 	    }
 	    return data;

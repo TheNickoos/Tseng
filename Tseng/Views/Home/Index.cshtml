@@ -2,9 +2,10 @@
     Layout = null;
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
+    
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Tseng</title>
@@ -143,7 +144,35 @@
         let slideIndex = 0;
 
 
+        function encodeToUnicodeUtf8(str) {
+                if (!str.length) return [];
 
+                const url = encodeURI(str);
+                const safeString = url.replace(/%20/g, ' '); // On remet l'espace comme un espace
+                const utf8Arr = [];
+                let multiByte = false;
+                let multiByteChar = '';
+
+                Array.from(safeString).forEach((str) => {
+                    // S'il y a un % c'est qu'on part sur du multibyte encodé par encodeURI
+                    if (str === '%') multiByte = true;
+
+                    // Premier caractère de l'octet
+                    else if (multiByte && !multiByteChar) multiByteChar = str;
+
+                    // Second caractère de l'octet encodé
+                    else if (multiByte) {
+                        utf8Arr.push(multiByteChar + str);
+                        multiByteChar = '';
+                        multiByte = false;
+                    }
+
+                    // Le caractère n'a pas été encodé, on récupère son codepoint
+                    else utf8Arr.push(str.charCodeAt().toString(16));
+                });
+
+                return utf8Arr;
+        }
 
         let app = new Vue({
             el: '#app',
@@ -167,7 +196,6 @@
                 }
             }
         });
-
 
         var rotateSlide = function() {
             if(++slideIndex >= slides.length) {
